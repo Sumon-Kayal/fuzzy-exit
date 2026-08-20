@@ -78,7 +78,7 @@ marker_end="# <<< fuzzy-exit <<<"
 if ! grep -Fqx "$marker_begin" "$rc_file" 2>/dev/null; then
     {
         printf '\n%s\n' "$marker_begin"
-        printf '[ -f "$HOME/.config/fuzzy-exit/fuzzy-exit.sh" ] && . "$HOME/.config/fuzzy-exit/fuzzy-exit.sh"\n'
+        printf '[ -f "%s" ] && . "%s"\n' "$SCRIPT_FILE" "$SCRIPT_FILE"
         printf '%s\n' "$marker_end"
     } >> "$rc_file"
 fi

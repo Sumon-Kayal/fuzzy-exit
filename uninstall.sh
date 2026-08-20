@@ -23,10 +23,30 @@ remove_from_rc() {
     tmp="$(mktemp)"
 
     awk -v begin="$marker_begin" -v end="$marker_end" '
-        $0 == begin { skip=1; next }
-        $0 == end   { skip=0; next }
+        $0 == begin {
+            if (skip == 1) {
+                print "Fuzzy Exit: nested or duplicate marker_begin found in " FILENAME > "/dev/stderr"
+                exit 1
+            }
+            skip = 1
+            next
+        }
+        $0 == end {
+            if (skip == 0) {
+                print "Fuzzy Exit: marker_end found without matching marker_begin in " FILENAME > "/dev/stderr"
+                exit 1
+            }
+            skip = 0
+            next
+        }
         !skip { print }
-    ' "$rc_file" > "$tmp"
+        END {
+            if (skip == 1) {
+                print "Fuzzy Exit: unclosed marker_begin found in " FILENAME > "/dev/stderr"
+                exit 1
+            }
+        }
+    ' "$rc_file" > "$tmp" || { rm -f "$tmp"; die "Malformed Fuzzy Exit marker block in $rc_file"; }
 
     if ! cmp -s "$rc_file" "$tmp"; then
         cp -p "$rc_file" "${rc_file}.fuzzy-exit.bak.$(date +%Y%m%d%H%M%S)"

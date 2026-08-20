@@ -1,4 +1,4 @@
-Fuzzy Exit
+# Fuzzy Exit
 
 Fuzzy Exit is a tiny shell enhancement that treats common mistypes of "exit" as "exit" itself.
 
@@ -14,7 +14,7 @@ Features
 
 - ⚡ Fast and lightweight
 - 🐧 Designed for Linux and other Unix-like systems
-- 🐚 Bash and Zsh support
+- 🐚 Bash and Zsh support using standard command-not-found hooks
 - 🧠 Recognizes fuzzy 3–4 character "exit" typos
 - 🛡️ Real commands always win
 - 🚫 Unrelated typos such as "wxit" remain normal "command not found" errors
@@ -36,7 +36,7 @@ Fuzzy Exit lets you do:
 
 $ exut
 
-and treats it as:
+and the shell closes immediately, as if you typed:
 
 exit
 
@@ -95,10 +95,7 @@ The installer:
 1. Detects the operating environment.
 2. Detects Bash or Zsh.
 3. Downloads the Fuzzy Exit implementation.
-4. Installs it under:
-
-~/.config/fuzzy-exit/
-
+4. Installs it under $XDG_CONFIG_HOME/fuzzy-exit (defaulting to ~/.config/fuzzy-exit).
 5. Adds a small integration block to the appropriate shell startup file.
 6. Avoids adding the integration twice.
 7. Creates a timestamped backup before modifying an existing startup file.
@@ -139,8 +136,8 @@ Supported Shells
 
 Currently targeted:
 
-- Bash
-- Zsh
+- Bash (via command_not_found_handle hook)
+- Zsh (via command_not_found_handler hook)
 
 The project is intended for Unix-like environments including:
 
