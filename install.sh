@@ -49,7 +49,13 @@ tmp_file="$(mktemp)"
 trap 'rm -f "$tmp_file"' EXIT
 
 say "Installing Fuzzy Exit for $shell_name..."
-if command -v curl >/dev/null 2>&1; then
+# FUZZY_EXIT_LOCAL_SCRIPT lets an already-cloned checkout (or the test suite)
+# install from disk instead of re-downloading. Unset by default, so the
+# documented curl-pipe-bash flow is unaffected.
+if [ -n "${FUZZY_EXIT_LOCAL_SCRIPT:-}" ]; then
+    [ -f "$FUZZY_EXIT_LOCAL_SCRIPT" ] || die "FUZZY_EXIT_LOCAL_SCRIPT is set but not found: $FUZZY_EXIT_LOCAL_SCRIPT"
+    cp "$FUZZY_EXIT_LOCAL_SCRIPT" "$tmp_file"
+elif command -v curl >/dev/null 2>&1; then
     curl -fsSL "$SCRIPT_URL" -o "$tmp_file" || die "Could not download $SCRIPT_URL"
 elif command -v wget >/dev/null 2>&1; then
     wget -qO "$tmp_file" "$SCRIPT_URL" || die "Could not download $SCRIPT_URL"
