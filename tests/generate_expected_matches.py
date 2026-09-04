@@ -22,8 +22,15 @@ import itertools
 
 
 def fuzzy_exit_match(word: str) -> bool:
-    """Mirrors the rules in __fuzzy_exit_match (fuzzy-exit.sh), reimplemented
-    independently rather than transliterated line-for-line."""
+    """
+    Determine whether a word matches the fuzzy exit command patterns.
+    
+    Parameters:
+        word (str): The word to evaluate, regardless of letter case.
+    
+    Returns:
+        bool: `true` if the word matches an accepted exit pattern, `false` otherwise.
+    """
     lc = word.lower()
     if lc == "exit":
         return True
@@ -51,6 +58,9 @@ def fuzzy_exit_match(word: str) -> bool:
 
 
 def main() -> None:
+    """
+    Print all four-letter lowercase strings accepted by the fuzzy exit matcher, in sorted order.
+    """
     matches = sorted(
         "".join(combo)
         for combo in itertools.product("abcdefghijklmnopqrstuvwxyz", repeat=4)
