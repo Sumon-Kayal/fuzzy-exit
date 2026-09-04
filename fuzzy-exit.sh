@@ -9,7 +9,7 @@
 # Real commands always win: this only ever runs after your shell has
 # already looked for the typed command everywhere (builtins, functions,
 # aliases, $PATH) and failed to find it. If a real command exists, it
-# runs normally and Fuzzy Exit never sees it.
+# __fuzzy_exit_match determines whether an argument matches "exit" or an accepted case-insensitive near-miss.
 
 __fuzzy_exit_match() {
     local lc suf n c1 c2 c3
@@ -57,6 +57,7 @@ __fuzzy_exit_match() {
 }
 
 if [ -n "${BASH_VERSION:-}" ]; then
+    # command_not_found_handle exits the shell when the missing command resembles an exit command; otherwise, it reports the command as not found and returns status 127.
     command_not_found_handle() {
         if __fuzzy_exit_match "$1"; then
             exit
@@ -67,6 +68,7 @@ if [ -n "${BASH_VERSION:-}" ]; then
 fi
 
 if [ -n "${ZSH_VERSION:-}" ]; then
+    # command_not_found_handler exits the shell for fuzzy exit commands; otherwise, it reports the missing command and returns status 127.
     command_not_found_handler() {
         if __fuzzy_exit_match "$1"; then
             exit

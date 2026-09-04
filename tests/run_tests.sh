@@ -27,6 +27,7 @@ pass=0
 fail=0
 failures=()
 
+# record updates the test counters and stores the failure message when a check fails.
 record() {
     if [ "$1" = "ok" ]; then
         pass=$((pass + 1))
@@ -36,6 +37,7 @@ record() {
     fi
 }
 
+# check compares the matcher result for a word with the expected outcome and records whether they agree.
 check() {
     local word="$1" expect="$2" got
     if __fuzzy_exit_match "$word"; then got=match; else got=nomatch; fi
