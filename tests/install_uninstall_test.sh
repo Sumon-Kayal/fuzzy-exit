@@ -41,19 +41,29 @@ unset BASHRC ZDOTDIR
 RC_FILE="$TMP_HOME/.bashrc"
 INSTALLED_SCRIPT="$TMP_HOME/.config/fuzzy-exit/fuzzy-exit.sh"
 BEGIN_MARKER="# >>> fuzzy-exit >>>"
+INSTALL_OUTPUT="$TMP_HOME/install_out.txt"
+INITIAL_RC_CONTENT="# pre-existing bashrc content"
+
+printf '%s\n' "$INITIAL_RC_CONTENT" > "$RC_FILE"
 
 echo "== First install =="
-if bash "$REPO_ROOT/install.sh" > /tmp/install_out.txt 2>&1; then ok; else bad "install.sh exited non-zero on first run"; fi
+if bash "$REPO_ROOT/install.sh" > "$INSTALL_OUTPUT" 2>&1; then ok; else bad "install.sh exited non-zero on first run"; fi
 assert_exists "$INSTALLED_SCRIPT"
 assert_contains "$INSTALLED_SCRIPT" "__fuzzy_exit_match"
 assert_contains "$RC_FILE" "$BEGIN_MARKER"
 assert_count "$RC_FILE" "$BEGIN_MARKER" 1
+first_backup=$(find "$TMP_HOME" -maxdepth 1 -name '.bashrc.fuzzy-exit.bak.*' -print -quit)
+if [ -n "$first_backup" ] && printf '%s\n' "$INITIAL_RC_CONTENT" | cmp -s - "$first_backup"; then
+    ok
+else
+    bad "first-install backup did not preserve the original rc file content"
+fi
 
 echo "== Installed script actually works when sourced =="
 ( source "$INSTALLED_SCRIPT" && __fuzzy_exit_match "exut" ) && ok || bad "sourced installed script did not match a known typo"
 
 echo "== Second install is idempotent (no duplicate marker block) =="
-bash "$REPO_ROOT/install.sh" > /dev/null 2>&1
+if bash "$REPO_ROOT/install.sh" > /dev/null 2>&1; then ok; else bad "install.sh exited non-zero on second run"; fi
 assert_count "$RC_FILE" "$BEGIN_MARKER" 1
 
 echo "== Backup was created before the rc file was first modified =="
