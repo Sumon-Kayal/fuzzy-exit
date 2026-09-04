@@ -1,0 +1,15 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor cruft
+*.swp
+*.swo
+*~
+
+# Shell rc backups (created by install.sh in $HOME, but ignore if ever local)
+*.bak.*
+
+# Test suite scratch files (run_tests.sh cleans these up via trap, but
+# ignore them in case a run is interrupted)
+tests/.*.tmp
