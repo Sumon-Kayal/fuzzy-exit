@@ -14,12 +14,12 @@ die() { printf 'Fuzzy Exit: %s\n' "$*" >&2; exit 1; }
 
 [ -n "${HOME:-}" ] || die "HOME is not set."
 
-# Native Windows shells should not be modified.
+# Fuzzy Exit targets Bash/Zsh on Unix-like systems. Native Windows shells,
+# including Bash-like layers on top of Windows (Git Bash/MSYS2/Cygwin), are
+# not supported and must not be modified.
 case "$(uname -s 2>/dev/null || printf unknown)" in
     MINGW*|MSYS*|CYGWIN*)
-        say "Fuzzy Exit: Windows environment detected."
-        say "Press Alt + F4 to close the terminal."
-        exit 0
+        die "Unsupported OS: Windows. Fuzzy Exit only supports Bash/Zsh on Linux, macOS, and other Unix-like systems."
         ;;
 esac
 
@@ -49,7 +49,13 @@ tmp_file="$(mktemp)"
 trap 'rm -f "$tmp_file"' EXIT
 
 say "Installing Fuzzy Exit for $shell_name..."
-if command -v curl >/dev/null 2>&1; then
+# FUZZY_EXIT_LOCAL_SCRIPT lets an already-cloned checkout (or the test suite)
+# install from disk instead of re-downloading. Unset by default, so the
+# documented curl-pipe-bash flow is unaffected.
+if [ -n "${FUZZY_EXIT_LOCAL_SCRIPT:-}" ]; then
+    [ -f "$FUZZY_EXIT_LOCAL_SCRIPT" ] || die "FUZZY_EXIT_LOCAL_SCRIPT is set but not found: $FUZZY_EXIT_LOCAL_SCRIPT"
+    cp "$FUZZY_EXIT_LOCAL_SCRIPT" "$tmp_file"
+elif command -v curl >/dev/null 2>&1; then
     curl -fsSL "$SCRIPT_URL" -o "$tmp_file" || die "Could not download $SCRIPT_URL"
 elif command -v wget >/dev/null 2>&1; then
     wget -qO "$tmp_file" "$SCRIPT_URL" || die "Could not download $SCRIPT_URL"
