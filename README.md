@@ -15,20 +15,20 @@ can mean exactly the same thing as:
 
 ## Features
 
-- ⚡ Fast and lightweight
-- 🐧 Designed for Linux and other Unix-like systems
-- 🐚 Bash and Zsh support using standard command-not-found hooks
-- 🧠 Recognizes fuzzy 3–4 character "exit" typos
-- 🛡️ Real commands always win
-- 🚫 Unrelated typos such as "wxit" remain normal "command not found" errors
-- 📦 Simple "curl" installation
-- 🧹 Simple uninstall
-- 🔒 Does not replace or modify the shell executable
-- 📜 GPL-3.0-or-later
+- ⚡ **Fast and lightweight**
+- 🐧 Designed for **Linux and other Unix-like systems**
+- 🐚 Supports **Bash and Zsh** using standard `command-not-found` hooks
+- 🧠 Recognizes fuzzy **3–4 character `exit` typos**
+- 🛡️ **Real commands always win**
+- 🚫 Unrelated typos such as `wxit` remain normal `command not found` errors
+- 📦 Simple **`curl` installation**
+- 🧹 Simple **uninstallation**
+- 🔒 Does **not** replace or modify the shell executable
+- 📜 Licensed under **GPL-3.0-or-later**
 
 ## Examples
 
-Instead of correcting yourself:
+## 🚀 How It Works
 
 ```
 $ exut
@@ -37,7 +37,7 @@ bash: exut: command not found
 $ exit
 ```
 
-Fuzzy Exit lets you do:
+With Fuzzy Exit installed:
 
 ```
 $ exut
@@ -45,7 +45,7 @@ $ exut
 
 and the shell closes immediately, as if you typed `exit`.
 
-Other examples may include:
+Common recognized variants may include:
 
 ```
 exiy
@@ -56,28 +56,30 @@ exir
 exis
 ```
 
-while an unrelated typo such as:
+An unrelated command remains untouched:
 
 ```
 $ wxit
 bash: wxit: command not found
 ```
 
-continues to behave normally.
+## 🛡️ Real Commands Always Win
 
 ## Real Commands Always Win
 
-Fuzzy Exit only gets involved after the shell has failed to find the command.
+That means an existing executable always takes priority.
 
 Therefore, if a real executable exists — `expr`, `exim`, `exif` — Fuzzy Exit does not turn it into "exit". The basic priority is:
 
 ```
 Real command
-    ↓
+    │
+    ▼
 Normal execution
 
 Unknown command
-    ↓
+    │
+    ▼
 Fuzzy Exit checks it
     ↓
 Looks like an exit typo?
@@ -85,7 +87,7 @@ Looks like an exit typo?
     └── No  → normal command-not-found
 ```
 
-This is an important safety property of the project.
+---
 
 ## Installation
 
@@ -126,7 +128,7 @@ The uninstaller removes `~/.config/fuzzy-exit/` and removes the Fuzzy Exit integ
 
 ## Supported Shells
 
-Currently targeted:
+Fuzzy Exit currently targets:
 
 - Bash (via `command_not_found_handle` hook)
 - Zsh (via `command_not_found_handler` hook)
@@ -164,7 +166,7 @@ Fuzzy Exit simply says:
 
 ## Design Philosophy
 
-Fuzzy Exit follows a few strict principles:
+Fuzzy Exit follows a few strict principles.
 
 1. **Stay tiny** — it should solve one problem and solve it quickly.
 2. **Never intercept real commands** — an installed executable always takes priority.
