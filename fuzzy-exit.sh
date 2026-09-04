@@ -56,7 +56,7 @@ __fuzzy_exit_match() {
     return 1
 }
 
-if [ -n "${BASH_VERSION:-}" ]; then
+if [ -n "$BASH_VERSION" ]; then
     command_not_found_handle() {
         if __fuzzy_exit_match "$1"; then
             exit
@@ -66,7 +66,7 @@ if [ -n "${BASH_VERSION:-}" ]; then
     }
 fi
 
-if [ -n "${ZSH_VERSION:-}" ]; then
+if [ -n "$ZSH_VERSION" ]; then
     command_not_found_handler() {
         if __fuzzy_exit_match "$1"; then
             exit
