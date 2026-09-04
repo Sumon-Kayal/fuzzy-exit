@@ -1,1 +1,56 @@
+name: CI
 
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: shellcheck fuzzy-exit.sh install.sh uninstall.sh tests/run_tests.sh tests/install_uninstall_test.sh
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Matcher unit tests
+        run: bash tests/run_tests.sh
+      - name: Install/uninstall integration test
+        run: bash tests/install_uninstall_test.sh
+
+  windows-entrypoints:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install.bat reports Unsupported OS and exits non-zero
+        shell: cmd
+        run: |
+          install.bat > out.txt 2>&1
+          if %ERRORLEVEL% EQU 0 (
+            type out.txt
+            echo FAIL: install.bat exited 0, expected non-zero
+            exit /b 1
+          )
+          findstr /C:"Unsupported OS" out.txt || (echo FAIL: missing "Unsupported OS" message & exit /b 1)
+      - name: install.ps1 reports Unsupported OS and exits non-zero
+        shell: pwsh
+        run: |
+          $output = & ./install.ps1 2>&1 | Out-String
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host $output
+            Write-Error "install.ps1 exited 0, expected non-zero"
+            exit 1
+          }
+          if ($output -notmatch "Unsupported OS") {
+            Write-Error "missing 'Unsupported OS' message"
+            exit 1
+          }
