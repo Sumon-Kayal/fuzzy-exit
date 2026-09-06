@@ -1,1 +1,42 @@
-
+PackageIdentifier: Somon.FuzzyExit
+PackageVersion: 1.0
+PackageLocale: en-US
+Publisher: Somon
+PackageName: Fuzzy Exit
+License: GPL-3.0-or-later
+ShortDescription: Treat common mistypes of exit as exit in CMD and PowerShell.
+Description: Fuzzy Exit adds lightweight exit-typo handling to native Windows CMD and PowerShell sessions.
+Tags:
+  - cmd
+  - command-line
+  - exit
+  - powershell
+  - terminal
+  - utility
+Installers:
+  - Architecture: x64
+    InstallerType: exe
+    InstallerUrl: https://github.com/Sumon-Kayal/fuzzy-exit/releases/download/v1.0/FuzzyExit-1.0-x64.exe
+    InstallerSha256: 4502fac8f54635161835f95055902018c211cc04c0f74d771ec6cf0839080c07
+    InstallerSwitches:
+      Silent: /S
+    Scope: user
+    MinimumOSVersion: 10.0.19045.0
+  - Architecture: arm64
+    InstallerType: exe
+    InstallerUrl: https://github.com/Sumon-Kayal/fuzzy-exit/releases/download/v1.0/FuzzyExit-1.0-arm64.exe
+    InstallerSha256: 9fe3e71eea6836da4c1ffd2d946bfc596b808ef2516130f225e41de91202a185
+    InstallerSwitches:
+      Silent: /S
+    Scope: user
+    MinimumOSVersion: 10.0.19045.0
+  - Architecture: x86
+    InstallerType: exe
+    InstallerUrl: https://github.com/Sumon-Kayal/fuzzy-exit/releases/download/v1.0/FuzzyExit-1.0-x86.exe
+    InstallerSha256: 38d68ed7dcb684276b7e4adc9004ba0030f85fdd27bcade341b8947aa5c2e0be
+    InstallerSwitches:
+      Silent: /S
+    Scope: user
+    MinimumOSVersion: 10.0.19045.0
+ManifestType: singleton
+ManifestVersion: 1.12.0
