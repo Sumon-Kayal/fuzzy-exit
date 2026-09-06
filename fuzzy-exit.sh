@@ -20,6 +20,23 @@ __fuzzy_exit_match() {
         return 0
     fi
 
+    # Leading-key typo: on a QWERTY row, "3" sits directly above "e", so
+    # treat it as an accepted stand-in for the first letter of "exit".
+    # Exactly one of the two middle characters may then also be wrong,
+    # as long as the other one and the trailing "t" are intact.
+    if [ "${#lc}" -eq 4 ] && [ "${lc:0:1}" = "3" ] && [ "${lc:3:1}" = "t" ]; then
+        if [ "${lc:1:1}" = "x" ] || [ "${lc:2:1}" = "i" ]; then
+            return 0
+        fi
+    fi
+
+    # Same idea starting from the correct "e": the "x" slot alone may be
+    # wrong as long as "e_it" is otherwise intact. (The "i" slot alone
+    # being wrong is already covered below via the "ex" anchor.)
+    if [ "${#lc}" -eq 4 ] && [ "${lc:0:1}" = "e" ] && [ "${lc:1:1}" != "x" ] && [ "${lc:2:1}" = "i" ] && [ "${lc:3:1}" = "t" ]; then
+        return 0
+    fi
+
     # Anchor: must start with "ex". This is what keeps an unrelated
     # near-miss like "wxit" (wrong first letter) from being swallowed -
     # only the tail end of the word is allowed to be the typo.

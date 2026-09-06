@@ -54,6 +54,7 @@ extt
 exut
 exir
 exis
+3xit
 ```
 
 An unrelated command remains untouched:
@@ -205,10 +206,10 @@ fuzzy-exit/
 
 The repository also includes generated word-combination corpora under `word_lists/`:
 
-- `exit_all_permutations.txt` — all 24 unique permutations of `exit`.
+- `exit_all_permutations.txt` — all 24 unique permutations of `exit`, plus an explicit supplied command set of additional supported typos (see below).
 - `all_4_character_combinations.txt` — all 456,976 lowercase four-character combinations.
 
-These corpora are provided as development/reference data. The runtime matcher does not load them.
+The runtime matcher (`fuzzy-exit.sh`) doesn't load these files directly - its rules are written out as plain character checks. `tests/run_tests.sh` does read `exit_all_permutations.txt`, to assert the matcher accepts every word in the explicit command set below and to exclude those same words when it scans `all_4_character_combinations.txt` for unexpected matches.
 
 ## Security Considerations
 
@@ -237,4 +238,4 @@ Copyright © 2026 Sumon Kayal.
 Fuzzy Exit — because "exut" obviously meant "exit".
 
 ### Explicit command set
-The merged release includes **52 unique commands** from the supplied command list, including the `ex??` and `3x??` variants. They are recorded explicitly in `fuzzy-exit/word_lists/exit_all_permutations.txt`.
+Beyond the 24-anagram set above, the supplied command list also covers four one-substitution variants of `exit` — a wrong "i" or "x" slot (`ex?t`, `e?it`), and their `3`-for-`e` counterparts (`3x?t`, `3?it`, since `3` sits directly above `e` on a QWERTY row) — 125 unique commands in total. They're recorded explicitly in `word_lists/exit_all_permutations.txt` and enforced by `tests/run_tests.sh`.

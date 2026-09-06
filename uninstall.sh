@@ -5,7 +5,6 @@ set -euo pipefail
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 INSTALL_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/fuzzy-exit"
-SCRIPT_FILE="${INSTALL_DIR}/fuzzy-exit.sh"
 
 say() { printf '%s\n' "$*"; }
 die() { printf 'Fuzzy Exit: %s\n' "$*" >&2; exit 1; }

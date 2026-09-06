@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2015
 # Exercises install.sh and uninstall.sh end-to-end against a throwaway HOME,
 # checking the specific claims made in README.md: idempotent install, a
 # timestamped backup on first modification, and a clean, reversible removal.
@@ -29,6 +30,7 @@ assert_count()      {
 }
 
 TMP_HOME="$(mktemp -d)"
+# shellcheck disable=SC2317  # invoked indirectly via the trap below
 cleanup() { rm -rf "$TMP_HOME"; }
 trap cleanup EXIT
 
@@ -60,6 +62,7 @@ else
 fi
 
 echo "== Installed script actually works when sourced =="
+# shellcheck disable=SC1090  # $INSTALLED_SCRIPT is a runtime mktemp path, not a static one
 ( source "$INSTALLED_SCRIPT" && __fuzzy_exit_match "exut" ) && ok || bad "sourced installed script did not match a known typo"
 
 echo "== Second install is idempotent (no duplicate marker block) =="
