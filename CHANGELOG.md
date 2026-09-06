@@ -1,5 +1,3 @@
-Yep — for a universal changelog format, I’d remove the GitHub-specific/release-specific wording and structure it so the same CHANGELOG.md can continue cleanly into v1.1, v2.0, etc.
-
 Changelog
 
 All notable changes to Fuzzy Exit are documented in this file.
@@ -39,9 +37,7 @@ Removed
 
 - Windows-specific implementation.
 - Windows executable and build artifacts.
-- Windows CMD and PowerShell integration.
-- Windows-specific installers and uninstallers.
-- WinGet packaging and manifests.
+-  Windows-specific installers and uninstallers.
 - Other platform-specific Windows release infrastructure.
 
 Security
@@ -72,19 +68,3 @@ For example:
 exut → exit
 
 ---
-
-"Unreleased" (https://github.com/Sumon-Kayal/fuzzy-exit/compare/v1.0.0...HEAD)
-
-Added
-
-Changed
-
-Deprecated
-
-Removed
-
-Fixed
-
-Security
-
----This is much more reusable: future releases can simply add ## [1.1.0], ## [1.2.0], etc., while the [Unreleased] section stays at the top.
