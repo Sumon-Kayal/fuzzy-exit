@@ -390,7 +390,8 @@ func appendProfile(path, integration string) error {
 	if strings.Contains(text, markerBegin) {
 		return nil
 	}
-	block := "\r\n" + markerBegin + "\r\n. '" + integration + "'\r\n" + markerEnd + "\r\n"
+	escapedIntegration := strings.ReplaceAll(integration, "'", "''")
+	block := "\r\n" + markerBegin + "\r\n. '" + escapedIntegration + "'\r\n" + markerEnd + "\r\n"
 	return os.WriteFile(path, append(old, []byte(block)...), 0644)
 }
 
