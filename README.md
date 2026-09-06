@@ -1,241 +1,151 @@
 # Fuzzy Exit
 
-[![CI](https://github.com/Sumon-Kayal/fuzzy-exit/actions/workflows/ci.yml/badge.svg)](https://github.com/Sumon-Kayal/fuzzy-exit/actions/workflows/ci.yml)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+Fuzzy Exit provides a small, fast way to exit the current shell/session using the
+`fuzzy-exit` command and shell integrations.
 
-Fuzzy Exit is a tiny shell enhancement that treats common mistypes of "exit" as "exit" itself.
+## Version
 
-For people who live in the terminal and type commands at ridiculous speed, this:
+**1.0**
 
-`exut`
+## Platform support
 
-can mean exactly the same thing as:
+### Windows
 
-`exit`
+Fuzzy Exit 1.0 supports:
 
-## Features
+- Windows 10 **22H2 or newer**
+- Windows 11 **22H2 or newer**
+- Command Prompt (CMD)
+- Windows PowerShell
+- PowerShell 7+
+- x64, ARM64, and x86 Windows
 
-- ⚡ **Fast and lightweight**
-- 🐧 Designed for **Linux and other Unix-like systems**
-- 🐚 Supports **Bash and Zsh** using standard `command-not-found` hooks
-- 🧠 Recognizes fuzzy **3–4 character `exit` typos**
-- 🛡️ **Real commands always win**
-- 🚫 Unrelated typos such as `wxit` remain normal `command not found` errors
-- 📦 Simple **`curl` installation**
-- 🧹 Simple **uninstallation**
-- 🔒 Does **not** replace or modify the shell executable
-- 📜 Licensed under **GPL-3.0-or-later**
+The Windows launcher/installers check the Windows version before making
+installation changes. Windows 10 builds below **19045** and Windows 11 builds
+below **22621** are rejected because they are older than 22H2.
 
-## Examples
+### Unix-like systems
 
-## 🚀 How It Works
+The project also retains its existing shell support for supported Unix-like
+environments, including Bash/Zsh integrations where provided by the project.
 
-```
-$ exut
-bash: exut: command not found
+## Windows installation
 
-$ exit
-```
+Use the installer matching your preferred shell:
 
-With Fuzzy Exit installed:
-
-```
-$ exut
+```text
+windows/install.bat
+windows/install.ps1
 ```
 
-and the shell closes immediately, as if you typed `exit`.
+The native Windows executables are:
 
-Common recognized variants may include:
-
-```
-exiy
-exii
-extt
-exut
-exir
-exis
-3xit
+```text
+windows/FuzzyExit-1.0-x64.exe
+windows/FuzzyExit-1.0-arm64.exe
+windows/FuzzyExit-1.0-x86.exe
 ```
 
-An unrelated command remains untouched:
+The installer uses the appropriate executable for the detected native Windows
+architecture.
 
-```
-$ wxit
-bash: wxit: command not found
-```
+## CMD
 
-## 🛡️ Real Commands Always Win
+After installation, open a new Command Prompt and run:
 
-## Real Commands Always Win
-
-That means an existing executable always takes priority.
-
-Therefore, if a real executable exists — `expr`, `exim`, `exif` — Fuzzy Exit does not turn it into "exit". The basic priority is:
-
-```
-Real command
-    │
-    ▼
-Normal execution
-
-Unknown command
-    │
-    ▼
-Fuzzy Exit checks it
-    ↓
-Looks like an exit typo?
-    ├── Yes → exit
-    └── No  → normal command-not-found
+```cmd
+fuzzy-exit
 ```
 
----
+## PowerShell
 
-## Installation
+After installation, open a new PowerShell session and run:
 
-The intended installation method is:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Sumon-Kayal/fuzzy-exit/main/install.sh | bash
+```powershell
+fuzzy-exit
 ```
 
-The installer:
+This works with both Windows PowerShell and PowerShell 7+ when their profiles
+are configured by the installer.
 
-1. Detects the operating environment.
-2. Detects Bash or Zsh.
-3. Downloads the Fuzzy Exit implementation.
-4. Installs it under `$XDG_CONFIG_HOME/fuzzy-exit` (defaulting to `~/.config/fuzzy-exit`).
-5. Adds a small integration block to the appropriate shell startup file.
-6. Avoids adding the integration twice.
-7. Creates a timestamped backup before modifying an existing startup file.
+## Windows version policy
 
-After installation, reload your shell:
+Fuzzy Exit intentionally stops installation on unsupported Windows versions.
 
-```bash
-source ~/.bashrc      # or, for Zsh:
-source ~/.zshrc
+| Windows version | Minimum build | Status |
+|---|---:|---|
+| Windows 10 22H2 | 19045 | Supported |
+| Windows 11 22H2 | 22621 | Supported |
+| Windows 10 older than 22H2 | < 19045 | Rejected |
+| Windows 11 older than 22H2 | < 22621 | Rejected |
+
+## WinGet
+
+The package identifier is:
+
+```text
+Somon.FuzzyExit
 ```
 
-Then try an exit typo: `exut`
+Once the package is published in the Windows Package Manager community
+repository, it can be installed with:
 
-## Uninstallation
-
-Run:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Sumon-Kayal/fuzzy-exit/main/uninstall.sh | bash
+```powershell
+winget install --id Somon.FuzzyExit -e
 ```
 
-The uninstaller removes `~/.config/fuzzy-exit/` and removes the Fuzzy Exit integration from `~/.bashrc` and `~/.zshrc`. Existing startup-file backups are preserved.
+Including a WinGet manifest in this repository does **not** by itself publish the
+package. Publication requires submission and acceptance by the WinGet
+community repository.
 
-## Supported Shells
+## GitHub releases
 
-Fuzzy Exit currently targets:
+Tagged releases are built by:
 
-- Bash (via `command_not_found_handle` hook)
-- Zsh (via `command_not_found_handler` hook)
-
-The project is intended for Unix-like environments including Linux, macOS, FreeBSD, OpenBSD, NetBSD, and other compatible Unix-like systems.
-
-## Windows
-
-Fuzzy Exit only supports Bash/Zsh on Unix-like systems and does not run on native Windows shells.
-
-- Running the installer inside a Bash-like layer on Windows (`MINGW*`/`MSYS*`/`CYGWIN*`, e.g. Git Bash) stops immediately, without touching shell configuration:
-
-  ```
-  Fuzzy Exit: Unsupported OS: Windows. Fuzzy Exit only supports Bash/Zsh on Linux, macOS, and other Unix-like systems.
-  ```
-
-- `install.bat` (cmd.exe) and `install.ps1` (PowerShell) are provided as native stubs. Running either one prints the same "Unsupported OS" message and exits non-zero, rather than failing with a generic "not recognized" error.
-
-WSL and other Unix-compatible environments are unaffected, since they provide a genuine Unix-like shell environment.
-
-## Why?
-
-Because humans type faster than they proofread. When you're working in a terminal, these are easy mistakes:
-
-```
-exit → exut
-exit → exii
-exit → exiy
-exit → extt
+```text
+.github/workflows/release.yml
 ```
 
-Fuzzy Exit simply says:
+The release workflow:
 
-> «You meant "exit". We knew.»
+- builds Windows x64, ARM64, and x86 binaries
+- creates a temporary self-signed SHA-256 code-signing certificate
+- signs the release executables
+- verifies the signatures
+- publishes the public certificate
+- calculates hashes from the signed binaries
+- generates release/WinGet metadata
+- publishes the release artifacts
 
-## Design Philosophy
+The private signing key is kept on the GitHub Actions runner and is not
+published.
 
-Fuzzy Exit follows a few strict principles.
+### Important: self-signed certificate
 
-1. **Stay tiny** — it should solve one problem and solve it quickly.
-2. **Never intercept real commands** — an installed executable always takes priority.
-3. **Don't modify the shell itself** — Fuzzy Exit operates through shell integration rather than replacing Bash, Zsh, or the terminal emulator.
-4. **Keep unrelated commands untouched** — for example, `wxit` is not an exit typo because it does not begin with the expected "ex" anchor, so it remains a normal command-not-found error.
-5. **Installation should be reversible** — the installer adds a clearly marked block, and the uninstaller removes that block without deleting unrelated shell configuration.
+The release binaries are self-signed. This provides cryptographic integrity and
+allows users to verify that a binary was signed by the published certificate,
+but it does **not** make the certificate automatically trusted by Windows like
+a certificate issued by a public code-signing CA.
 
-## Repository Layout
+## Project layout
 
-```
-fuzzy-exit/
-├── fuzzy-exit.sh
-├── install.sh
-├── install.bat
-├── install.ps1
-├── uninstall.sh
-├── README.md
-├── LICENSE
-├── .gitignore
+```text
+.
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml
-│       └── full-corpus.yml
-└── tests/
-    ├── README.md
-    ├── run_tests.sh
-    ├── install_uninstall_test.sh
-    ├── generate_expected_matches.py
-    └── fixtures/
-        ├── all_4_character_combinations.txt
-        ├── exit_all_permutations.txt
-        └── expected_matches.txt
+│       └── release.yml
+├── windows/
+│   ├── FuzzyExit-1.0-x64.exe
+│   ├── FuzzyExit-1.0-arm64.exe
+│   ├── FuzzyExit-1.0-x86.exe
+│   ├── install.bat
+│   ├── install.ps1
+│   ├── uninstall.bat
+│   └── uninstall.ps1
+├── CHANGELOG.md
+└── README.md
 ```
-
-## Word Lists
-
-The repository also includes generated word-combination corpora under `word_lists/`:
-
-- `exit_all_permutations.txt` — all 24 unique permutations of `exit`, plus an explicit supplied command set of additional supported typos (see below).
-- `all_4_character_combinations.txt` — all 456,976 lowercase four-character combinations.
-
-The runtime matcher (`fuzzy-exit.sh`) doesn't load these files directly - its rules are written out as plain character checks. `tests/run_tests.sh` does read `exit_all_permutations.txt`, to assert the matcher accepts every word in the explicit command set below and to exclude those same words when it scans `all_4_character_combinations.txt` for unexpected matches.
-
-## Security Considerations
-
-The installer modifies shell startup configuration, so it should only be downloaded from a trusted source. For maximum transparency, users can inspect the installer before running it:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Sumon-Kayal/fuzzy-exit/main/install.sh
-```
-
-Likewise, the main implementation can be inspected directly before installation. Never pipe an installer into a shell if you do not trust its source.
 
 ## License
 
-Fuzzy Exit is free software distributed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).
-
-Copyright © 2026 Sumon Kayal.
-
-## Project
-
-**Fuzzy Exit** — https://github.com/Sumon-Kayal/fuzzy-exit
-
----
-
-*The idea in one line:* `exut` → `exit`
-
-Fuzzy Exit — because "exut" obviously meant "exit".
-
-### Explicit command set
-Beyond the 24-anagram set above, the supplied command list also covers four one-substitution variants of `exit` — a wrong "i" or "x" slot (`ex?t`, `e?it`), and their `3`-for-`e` counterparts (`3x?t`, `3?it`, since `3` sits directly above `e` on a QWERTY row) — 125 unique commands in total. They're recorded explicitly in `word_lists/exit_all_permutations.txt` and enforced by `tests/run_tests.sh`.
+See the project's license file for licensing terms.
