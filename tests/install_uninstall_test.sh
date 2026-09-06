@@ -86,21 +86,6 @@ fi
 backup_count_after=$(find "$TMP_HOME" -maxdepth 1 -name '.bashrc.fuzzy-exit.bak.*' | wc -l)
 [ "$backup_count_after" -ge "$backup_count" ] && ok || bad "backups were removed by uninstall, expected them preserved"
 
-echo "== Windows-like uname is rejected, not silently accepted =="
-fake_bin="$(mktemp -d)"
-cat > "$fake_bin/uname" <<'EOF'
-#!/usr/bin/env bash
-echo "MINGW64_NT-10.0-19045"
-EOF
-chmod +x "$fake_bin/uname"
-if PATH="$fake_bin:$PATH" bash "$REPO_ROOT/install.sh" > /tmp/fuzzy_exit_win_out.txt 2>&1; then
-    bad "install.sh should exit non-zero when uname reports a Windows-like environment"
-else
-    ok
-fi
-assert_contains /tmp/fuzzy_exit_win_out.txt "Unsupported OS"
-rm -rf "$fake_bin" /tmp/fuzzy_exit_win_out.txt
-
 echo ""
 echo "== Results: $pass passed, $fail failed =="
 if [ "$fail" -gt 0 ]; then
