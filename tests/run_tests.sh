@@ -121,8 +121,6 @@ fi
 
 echo "== Safety invariant: nothing outside the 'ex' prefix ever matches =="
 total_lines=$(wc -l < "$FIXTURES/all_4_character_combinations.txt")
-non_ex_count=$((total_lines - candidate_count))
-echo "  ($total_lines total 4-char strings, $non_ex_count start with something other than 'ex')"
 
 # Words outside the "ex" prefix that word_lists/exit_all_permutations.txt
 # explicitly documents as supported (a leading "3" typo for "e", or "e_it"
@@ -138,11 +136,14 @@ else
     echo "  (word_lists/exit_all_permutations.txt not found; skipping the deliberately-supported exclusion list)"
 fi
 
+non_ex_candidates="$SCRIPT_DIR/.non_ex_candidates.tmp"
+grep -v '^ex' "$FIXTURES/all_4_character_combinations.txt" | grep -vxFf "$extra_expected" > "$non_ex_candidates"
+non_ex_count=$(wc -l < "$non_ex_candidates")
+echo "  ($total_lines total 4-char strings, $non_ex_count filtered non-'ex' candidates)"
+
 if [ "$FULL_MODE" -eq 1 ]; then
-    echo "  --full: invoking the real matcher on all $non_ex_count of them (this takes a while)..."
-    non_ex_candidates="$SCRIPT_DIR/.non_ex_candidates.tmp"
+    echo "  --full: invoking the real matcher on all $non_ex_count filtered non-'ex' candidates (this takes a while)..."
     trap 'rm -f "$ex_candidates" "$actual_matches" "$extra_expected" "$non_ex_candidates"' EXIT
-    grep -v '^ex' "$FIXTURES/all_4_character_combinations.txt" | grep -vxFf "$extra_expected" > "$non_ex_candidates"
     unexpected=0
     while IFS= read -r word; do
         if __fuzzy_exit_match "$word"; then
@@ -160,7 +161,7 @@ else
     # Deterministic stride sample (~3,330 words spread across the whole
     # corpus) so this is fast, reproducible, and needs nothing beyond awk.
     sample="$SCRIPT_DIR/.nonex_sample.tmp"
-    trap 'rm -f "$ex_candidates" "$actual_matches" "$extra_expected" "$sample"' EXIT
+    trap 'rm -f "$ex_candidates" "$actual_matches" "$extra_expected" "$non_ex_candidates" "$sample"' EXIT
     awk '!/^ex/ && NR % 137 == 0' "$FIXTURES/all_4_character_combinations.txt" | grep -vxFf "$extra_expected" > "$sample"
     sample_count=$(wc -l < "$sample")
     unexpected=0
@@ -169,7 +170,7 @@ else
     done < "$sample"
     if [ "$unexpected" -eq 0 ]; then
         record ok
-        echo "  sampled $sample_count of $non_ex_count non-'ex' strings, zero false positives (run with --full to check all of them)"
+        echo "  sampled $sample_count of $non_ex_count filtered non-'ex' candidates, zero false positives (run with --full to check all of them)"
     else
         record fail "$unexpected/$sample_count sampled non-'ex' string(s) matched; see above"
     fi
