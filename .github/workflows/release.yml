@@ -1,0 +1,284 @@
+name: Release Fuzzy Exit
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to create (for example v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      GO_VERSION: '1.23.x'
+      PRODUCT_NAME: 'Fuzzy Exit'
+      PACKAGE_ID: 'Somon.FuzzyExit'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select release tag
+        id: release
+        shell: pwsh
+        run: |
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            $tag = '${{ inputs.tag }}'
+          } else {
+            $tag = '${{ github.ref_name }}'
+          }
+
+          if ($tag -notmatch '^v\d+\.\d+(?:\.\d+)?$') {
+            throw "Release tag must look like v1.0.0; got '$tag'"
+          }
+
+          $version = $tag.Substring(1)
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build Windows binaries
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:CGO_ENABLED = '0'
+
+          $targets = @(
+            @{ GOARCH = 'amd64'; Name = 'x64'   },
+            @{ GOARCH = 'arm64'; Name = 'arm64' },
+            @{ GOARCH = '386';   Name = 'x86'  }
+          )
+
+          foreach ($target in $targets) {
+            $env:GOOS = 'windows'
+            $env:GOARCH = $target.GOARCH
+            $output = "windows/FuzzyExit-$env:VERSION-$($target.Name).exe"
+            & go build -trimpath -ldflags='-s -w' -o $output ./windows
+            if ($LASTEXITCODE -ne 0) {
+              throw "Go build failed for $($target.GOARCH)"
+            }
+          }
+
+      - name: Locate SignTool
+        id: signtool
+        shell: pwsh
+        run: |
+          $tool = Get-ChildItem "$env:ProgramFiles(x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+
+          if (-not $tool) {
+            throw 'Windows SDK SignTool was not found on the runner.'
+          }
+
+          "path=$($tool.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Create self-signed code-signing certificate
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'fuzzy-exit-signing'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+          $ps = @'
+          $ErrorActionPreference = 'Stop'
+          $subject = 'CN=Somon Fuzzy Exit'
+          $cert = New-SelfSignedCertificate `
+            -Subject $subject `
+            -Type CodeSigningCert `
+            -CertStoreLocation 'Cert:\CurrentUser\My' `
+            -KeyAlgorithm RSA `
+            -KeyLength 3072 `
+            -HashAlgorithm SHA256 `
+            -NotAfter (Get-Date).AddYears(5)
+
+          Export-Certificate -Cert $cert -FilePath $env:FUZZY_EXIT_CERT | Out-Null
+          $cert.Thumbprint | Set-Content -NoNewline $env:FUZZY_EXIT_THUMBPRINT
+          '@
+
+          $env:FUZZY_EXIT_CERT = Join-Path $out 'Somon.FuzzyExit-CodeSigning.cer'
+          $env:FUZZY_EXIT_THUMBPRINT = Join-Path $out 'thumbprint.txt'
+
+          $psFile = Join-Path $out 'create-cert.ps1'
+          Set-Content -Path $psFile -Value $ps -Encoding UTF8
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $psFile
+
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item $env:FUZZY_EXIT_CERT 'release/Somon.FuzzyExit-CodeSigning.cer' -Force
+          $thumb = (Get-Content $env:FUZZY_EXIT_THUMBPRINT -Raw).Trim()
+          "thumbprint=$thumb" >> $env:GITHUB_OUTPUT
+          "FUZZY_EXIT_CERT_THUMBPRINT=$thumb" >> $env:GITHUB_ENV
+        id: cert
+
+      - name: Trust certificate on the runner for verification
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cert = Import-Certificate -FilePath (Join-Path $env:RUNNER_TEMP 'fuzzy-exit-signing/Somon.FuzzyExit-CodeSigning.cer') -CertStoreLocation 'Cert:\CurrentUser\Root'
+          if (-not $cert) { throw 'Failed to import self-signed certificate into the runner root store.' }
+          Import-Certificate -FilePath (Join-Path $env:RUNNER_TEMP 'fuzzy-exit-signing/Somon.FuzzyExit-CodeSigning.cer') -CertStoreLocation 'Cert:\CurrentUser\TrustedPublisher' | Out-Null
+
+      - name: Sign Windows executables
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tool = '${{ steps.signtool.outputs.path }}'
+          $thumb = $env:FUZZY_EXIT_CERT_THUMBPRINT
+          if (-not $thumb) { throw 'Signing certificate thumbprint is not available.' }
+
+          Get-ChildItem "windows/FuzzyExit-$env:VERSION-*.exe" | ForEach-Object {
+            & $tool sign /sha1 $thumb /fd SHA256 /tr https://timestamp.digicert.com /td SHA256 /d 'Fuzzy Exit' $_.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "SignTool failed for $($_.Name)"
+            }
+          }
+
+      - name: Verify signatures and compute hashes
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tool = '${{ steps.signtool.outputs.path }}'
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+
+          $rows = @()
+          Get-ChildItem "windows/FuzzyExit-$env:VERSION-*.exe" | Sort-Object Name | ForEach-Object {
+            & $tool verify /pa $_.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "Signature verification failed for $($_.Name)"
+            }
+
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            $rows += [pscustomobject]@{
+              File = $_.Name
+              SHA256 = $hash
+            }
+
+            Copy-Item $_.FullName (Join-Path 'release' $_.Name) -Force
+          }
+
+          $rows | Format-Table -AutoSize | Out-File 'release/SHA256SUMS.txt' -Encoding utf8
+          $rows | ForEach-Object { "$($_.SHA256)  $($_.File)" } | Set-Content 'release/SHA256SUMS.txt' -Encoding utf8
+
+      - name: Generate WinGet manifest for signed release
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path release/winget | Out-Null
+
+          $base = "https://github.com/${{ github.repository }}/releases/download/$env:TAG"
+          $files = @(
+            @{ Architecture = 'x64';   File = "FuzzyExit-$env:VERSION-x64.exe" },
+            @{ Architecture = 'arm64'; File = "FuzzyExit-$env:VERSION-arm64.exe" },
+            @{ Architecture = 'x86';   File = "FuzzyExit-$env:VERSION-x86.exe" }
+          )
+
+          $entries = foreach ($item in $files) {
+            $path = Join-Path 'release' $item.File
+            if (-not (Test-Path $path)) { throw "Missing signed release file: $path" }
+            $hash = (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            @"
+          - Architecture: $($item.Architecture)
+            InstallerType: exe
+            InstallerUrl: $base/$($item.File)
+            InstallerSha256: $hash
+            InstallerSwitches:
+              Silent: /S
+            Scope: user
+            MinimumOSVersion: 10.0.19045.0
+          "@
+          }
+
+          $manifest = @"
+          PackageIdentifier: Somon.FuzzyExit
+          PackageVersion: $env:VERSION
+          PackageLocale: en-US
+          Publisher: Somon
+          PackageName: Fuzzy Exit
+          License: GPL-3.0-or-later
+          ShortDescription: Treat common mistypes of exit as exit in CMD and PowerShell.
+          Description: Fuzzy Exit adds lightweight exit-typo handling to native Windows CMD and PowerShell sessions.
+          Tags:
+            - cmd
+            - command-line
+            - exit
+            - powershell
+            - terminal
+            - utility
+          Installers:
+          $($entries -join "`n")
+          ManifestType: singleton
+          ManifestVersion: 1.12.0
+          "@
+
+          Set-Content 'release/winget/Somon.FuzzyExit.yaml' $manifest -Encoding utf8
+
+      - name: Create GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $notes = @"
+          # Fuzzy Exit $env:VERSION
+
+          Signed Windows release for CMD and PowerShell.
+
+          ## Windows support
+          - Windows 10 22H2 (build 19045) or newer
+          - Windows 11 22H2 (build 22621) or newer
+          - x64, ARM64, and x86
+
+          ## Signing
+          The Windows executables are signed with a self-signed SHA-256 code-signing certificate.
+          Import `Somon.FuzzyExit-CodeSigning.cer` into a trusted certificate store before expecting Windows to treat the publisher as trusted.
+          A self-signed certificate establishes integrity after trust is installed; it is not equivalent to a CA-issued public code-signing certificate.
+          "@
+          Set-Content (Join-Path $env:RUNNER_TEMP 'release-notes.md') $notes -Encoding utf8
+
+          gh release create $env:TAG `
+            release/FuzzyExit-$env:VERSION-x64.exe `
+            release/FuzzyExit-$env:VERSION-arm64.exe `
+            release/FuzzyExit-$env:VERSION-x86.exe `
+            release/SHA256SUMS.txt `
+            release/Somon.FuzzyExit-CodeSigning.cer `
+            release/winget/Somon.FuzzyExit.yaml `
+            --repo '${{ github.repository }}' `
+            --title "Fuzzy Exit $env:VERSION" `
+            --notes-file (Join-Path $env:RUNNER_TEMP 'release-notes.md') `
+            --verify-tag
+
+      - name: Clean private signing material
+        if: always()
+        shell: pwsh
+        run: |
+          $p = Join-Path $env:RUNNER_TEMP 'fuzzy-exit-signing'
+          if (Test-Path $p) {
+            Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue
+          }
+          Remove-Item Env:FUZZY_EXIT_CERT_THUMBPRINT -ErrorAction SilentlyContinue

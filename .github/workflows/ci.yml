@@ -31,32 +31,41 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: install.bat reports Unsupported OS and exits non-zero
-        shell: cmd
-        run: |
-          call install.bat > out.txt 2>&1
-          set RC=%ERRORLEVEL%
-          type out.txt
-          if "%RC%"=="0" (
-            echo FAIL: install.bat exited 0, expected non-zero
-            exit /b 1
-          )
-          findstr /C:"Unsupported OS" out.txt >nul
-          if errorlevel 1 (
-            echo FAIL: missing "Unsupported OS" message
-            exit /b 1
-          )
-          exit /b 0
-      - name: install.ps1 reports Unsupported OS and exits non-zero
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - name: Build native installer executable
+        shell: pwsh
+        run: go build -trimpath -ldflags='-s -w' -o windows/FuzzyExit-1.0-x64.exe ./windows
+      - name: Check Windows entry points
         shell: pwsh
         run: |
-          $output = pwsh -NoProfile -File ./install.ps1 2>&1 | Out-String
-          Write-Host $output
-          if ($LASTEXITCODE -eq 0) {
-            Write-Error "install.ps1 exited 0, expected non-zero"
-            exit 1
-          }
-          if ($output -notmatch "Unsupported OS") {
-            Write-Error "missing 'Unsupported OS' message"
-            exit 1
-          }
+          $bat = Get-Content ./install.bat -Raw
+          $ps = Get-Content ./install.ps1 -Raw
+          if ($bat -notmatch '19045' -or $bat -notmatch '22621') { throw 'install.bat is missing the 22H2 build gates' }
+          if ($ps -notmatch '19045' -or $ps -notmatch '22621') { throw 'install.ps1 is missing the 22H2 build gates' }
+          if ($bat -notmatch 'FuzzyExit-1.0-x64.exe') { throw 'install.bat does not reference the native executable' }
+          if ($ps -notmatch 'FuzzyExit-1.0-x64.exe') { throw 'install.ps1 does not reference the native executable' }
+
+  windows-native-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - name: Build Windows x64
+        shell: pwsh
+        run: go build -trimpath -ldflags='-s -w' -o windows/FuzzyExit-1.0-x64.exe ./windows
+      - name: Build Windows ARM64
+        shell: pwsh
+        run: $env:GOARCH='arm64'; go build -trimpath -ldflags='-s -w' -o windows/FuzzyExit-1.0-arm64.exe ./windows
+      - name: Build Windows x86
+        shell: pwsh
+        run: $env:GOARCH='386'; go build -trimpath -ldflags='-s -w' -o windows/FuzzyExit-1.0-x86.exe ./windows
+      - name: Verify PE binaries
+        shell: pwsh
+        run: |
+          if (-not (Test-Path windows/FuzzyExit-1.0-x64.exe)) { throw 'x64 executable missing' }
+          if (-not (Test-Path windows/FuzzyExit-1.0-arm64.exe)) { throw 'ARM64 executable missing' }
+          if (-not (Test-Path windows/FuzzyExit-1.0-x86.exe)) { throw 'x86 executable missing' }
