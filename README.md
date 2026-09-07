@@ -57,6 +57,8 @@ The primary shell integrations are:
 - Bash
 - Zsh
 
+Native Windows (cmd.exe / PowerShell) is not supported. The installer script will refuse to run in Windows-like environments (for example, Git Bash / MSYS / Cygwin) to avoid accidental modification of Windows users' startup files. Small installer stubs (install.bat, install.ps1) are included in the repository; they print an explanatory "Unsupported OS" message and exit non-zero.
+
 ## How It Works
 
 Fuzzy Exit does not replace your shell.
@@ -98,7 +100,7 @@ With Fuzzy Exit installed, the shell exits as though you had typed:
 $ exit
 ```
 
-Some recognized forms include:
+Some recognized forms include (non-exhaustive):
 
 ```text
 exut
@@ -108,9 +110,10 @@ extt
 exir
 exis
 3xit
+eqit
 ```
 
-The matcher also includes the complete explicit permutation set where applicable.
+The matcher also includes the complete explicit permutation and curated near-miss set where applicable (see `word_lists/exit_all_permutations.txt`).
 
 An unrelated command remains untouched:
 
@@ -136,6 +139,9 @@ For maximum transparency, inspect the installer before running it:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sumon-Kayal/fuzzy-exit/main/install.sh
 ```
+
+Important note about Windows-like environments
+- The installer script will exit early with a clear message if it detects a Windows-like environment (MINGW*/MSYS*/CYGWIN*). This prevents accidental modification of Windows startup files when using Git Bash or similar environments. If you see an "Unsupported OS" message, Fuzzy Exit is not being installed on that environment intentionally.
 
 The installer:
 
@@ -226,8 +232,7 @@ Contains the unique permutations of:
 exit
 ```
 
-followed by every other explicitly-supported near-miss command outside those
-permutations — see `word_lists/README.txt` for the breakdown.
+followed by every other explicitly-supported near-miss command outside those permutations — see `word_lists/README.txt` for the breakdown.
 
 ### `all_4_character_combinations.txt`
 
