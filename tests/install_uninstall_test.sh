@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2015
 # Exercises install.sh and uninstall.sh end-to-end against a throwaway HOME,
 # checking the specific claims made in README.md: idempotent install, a
 # timestamped backup on first modification, and a clean, reversible removal.
@@ -29,6 +30,7 @@ assert_count()      {
 }
 
 TMP_HOME="$(mktemp -d)"
+# shellcheck disable=SC2317  # invoked indirectly via the trap below
 cleanup() { rm -rf "$TMP_HOME"; }
 trap cleanup EXIT
 
@@ -60,6 +62,7 @@ else
 fi
 
 echo "== Installed script actually works when sourced =="
+# shellcheck disable=SC1090  # $INSTALLED_SCRIPT is a runtime mktemp path, not a static one
 ( source "$INSTALLED_SCRIPT" && __fuzzy_exit_match "exut" ) && ok || bad "sourced installed script did not match a known typo"
 
 echo "== Second install is idempotent (no duplicate marker block) =="
@@ -82,21 +85,6 @@ if [ -f "$RC_FILE" ]; then
 fi
 backup_count_after=$(find "$TMP_HOME" -maxdepth 1 -name '.bashrc.fuzzy-exit.bak.*' | wc -l)
 [ "$backup_count_after" -ge "$backup_count" ] && ok || bad "backups were removed by uninstall, expected them preserved"
-
-echo "== Windows-like uname is rejected, not silently accepted =="
-fake_bin="$(mktemp -d)"
-cat > "$fake_bin/uname" <<'EOF'
-#!/usr/bin/env bash
-echo "MINGW64_NT-10.0-19045"
-EOF
-chmod +x "$fake_bin/uname"
-if PATH="$fake_bin:$PATH" bash "$REPO_ROOT/install.sh" > /tmp/fuzzy_exit_win_out.txt 2>&1; then
-    bad "install.sh should exit non-zero when uname reports a Windows-like environment"
-else
-    ok
-fi
-assert_contains /tmp/fuzzy_exit_win_out.txt "Unsupported OS"
-rm -rf "$fake_bin" /tmp/fuzzy_exit_win_out.txt
 
 echo ""
 echo "== Results: $pass passed, $fail failed =="

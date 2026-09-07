@@ -1,93 +1,130 @@
 # Fuzzy Exit
 
 [![CI](https://github.com/Sumon-Kayal/fuzzy-exit/actions/workflows/ci.yml/badge.svg)](https://github.com/Sumon-Kayal/fuzzy-exit/actions/workflows/ci.yml)
+[![Full Corpus](https://github.com/Sumon-Kayal/fuzzy-exit/actions/workflows/full-corpus.yml/badge.svg)](https://github.com/Sumon-Kayal/fuzzy-exit/actions/workflows/full-corpus.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-Fuzzy Exit is a tiny shell enhancement that treats common mistypes of "exit" as "exit" itself.
+**Fuzzy Exit** is a tiny shell enhancement that treats common mistypes of `exit` as `exit` itself.
 
-For people who live in the terminal and type commands at ridiculous speed, this:
+```text
+exut → exit
+```
 
-`exut`
+## Table of Contents
 
-can mean exactly the same thing as:
-
-`exit`
+- [Features](#features)
+- [Supported Platforms](#supported-platforms)
+- [How It Works](#how-it-works)
+- [Examples](#examples)
+- [Installation](#installation)
+- [Uninstallation](#uninstallation)
+- [Testing](#testing)
+- [Word Lists and Corpus](#word-lists-and-corpus)
+- [Design Philosophy](#design-philosophy)
+- [Security](#security)
+- [Repository Layout](#repository-layout)
+- [Version](#version)
+- [License](#license)
 
 ## Features
 
-- ⚡ **Fast and lightweight**
-- 🐧 Designed for **Linux and other Unix-like systems**
-- 🐚 Supports **Bash and Zsh** using standard `command-not-found` hooks
-- 🧠 Recognizes fuzzy **3–4 character `exit` typos**
-- 🛡️ **Real commands always win**
-- 🚫 Unrelated typos such as `wxit` remain normal `command not found` errors
-- 📦 Simple **`curl` installation**
-- 🧹 Simple **uninstallation**
-- 🔒 Does **not** replace or modify the shell executable
-- 📜 Licensed under **GPL-3.0-or-later**
+- ⚡ Fast and lightweight
+- 🧠 Recognizes fuzzy `exit` typos and selected near-misses
+- 🛡️ Real commands take priority through the shell's command-not-found path
+- 🚫 Unrelated commands remain normal command-not-found errors
+- 🐚 Bash and Zsh integration
+- 🐧 Linux support
+- 🍎 macOS support
+- 👹 BSD / Unix support
+- 📱 Termux / Android support
+- 🔧 Install and uninstall helpers
+- 🔒 Does not replace the shell executable
+- 🧪 Deterministic unit, integration, and corpus tests
+- 📜 Licensed under GPL-3.0-or-later
+
+## Supported Platforms
+
+Fuzzy Exit is designed for Unix-like systems, including:
+
+- Linux
+- macOS
+- BSD systems
+- Other compatible Unix-like environments
+- Termux on Android
+
+The primary shell integrations are:
+
+- Bash
+- Zsh
+
+Native Windows (cmd.exe / PowerShell) is not supported. The installer script will refuse to run in Windows-like environments (for example, Git Bash / MSYS / Cygwin) to avoid accidental modification of Windows users' startup files. Small installer stubs (install.bat, install.ps1) are included in the repository; they print an explanatory "Unsupported OS" message and exit non-zero.
+
+## How It Works
+
+Fuzzy Exit does not replace your shell.
+
+On Bash and Zsh, it hooks into the shell's command-not-found mechanism. A command that resolves normally is left alone; only an unknown command reaches the matcher.
+
+```text
+Typed command
+     │
+     ▼
+Shell resolves command
+     │
+     ├── Real command exists ──► run normally
+     │
+     └── Unknown command
+              │
+              ▼
+        Fuzzy Exit matcher
+              │
+        ┌─────┴─────┐
+        │           │
+      exit-like    other
+        │           │
+        ▼           ▼
+      exit     normal command-not-found
+```
 
 ## Examples
 
-## 🚀 How It Works
+A common typo:
 
-```
+```text
 $ exut
-bash: exut: command not found
+```
 
+With Fuzzy Exit installed, the shell exits as though you had typed:
+
+```text
 $ exit
 ```
 
-With Fuzzy Exit installed:
+Some recognized forms include (non-exhaustive):
 
-```
-$ exut
-```
-
-and the shell closes immediately, as if you typed `exit`.
-
-Common recognized variants may include:
-
-```
-exiy
-exii
-extt
+```text
 exut
+exii
+exiy
+extt
 exir
 exis
+3xit
+eqit
 ```
+
+The matcher also includes the complete explicit permutation and curated near-miss set where applicable (see `word_lists/exit_all_permutations.txt`).
 
 An unrelated command remains untouched:
 
-```
+```text
 $ wxit
 bash: wxit: command not found
 ```
 
-## 🛡️ Real Commands Always Win
+### Real commands always win
 
-## Real Commands Always Win
-
-That means an existing executable always takes priority.
-
-Therefore, if a real executable exists — `expr`, `exim`, `exif` — Fuzzy Exit does not turn it into "exit". The basic priority is:
-
-```
-Real command
-    │
-    ▼
-Normal execution
-
-Unknown command
-    │
-    ▼
-Fuzzy Exit checks it
-    ↓
-Looks like an exit typo?
-    ├── Yes → exit
-    └── No  → normal command-not-found
-```
-
----
+Fuzzy Exit is designed to run only after normal command resolution fails. A command that already exists on `PATH` is not sent through the Bash/Zsh command-not-found integration.
 
 ## Installation
 
@@ -97,24 +134,41 @@ The intended installation method is:
 curl -fsSL https://raw.githubusercontent.com/Sumon-Kayal/fuzzy-exit/main/install.sh | bash
 ```
 
+For maximum transparency, inspect the installer before running it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sumon-Kayal/fuzzy-exit/main/install.sh
+```
+
+Important note about Windows-like environments
+- The installer script will exit early with a clear message if it detects a Windows-like environment (MINGW*/MSYS*/CYGWIN*). This prevents accidental modification of Windows startup files when using Git Bash or similar environments. If you see an "Unsupported OS" message, Fuzzy Exit is not being installed on that environment intentionally.
+
 The installer:
 
-1. Detects the operating environment.
-2. Detects Bash or Zsh.
-3. Downloads the Fuzzy Exit implementation.
-4. Installs it under `$XDG_CONFIG_HOME/fuzzy-exit` (defaulting to `~/.config/fuzzy-exit`).
-5. Adds a small integration block to the appropriate shell startup file.
-6. Avoids adding the integration twice.
-7. Creates a timestamped backup before modifying an existing startup file.
+1. Detects the shell environment.
+2. Supports Bash and Zsh.
+3. Installs the runtime under `${XDG_CONFIG_HOME:-$HOME/.config}/fuzzy-exit`.
+4. Adds a clearly marked integration block to the appropriate startup file.
+5. Avoids duplicate integration blocks.
+6. Creates a timestamped backup before modifying an existing startup file.
 
 After installation, reload your shell:
 
 ```bash
-source ~/.bashrc      # or, for Zsh:
+source ~/.bashrc
+```
+
+or:
+
+```bash
 source ~/.zshrc
 ```
 
-Then try an exit typo: `exut`
+Then try:
+
+```text
+exut
+```
 
 ## Uninstallation
 
@@ -124,117 +178,142 @@ Run:
 curl -fsSL https://raw.githubusercontent.com/Sumon-Kayal/fuzzy-exit/main/uninstall.sh | bash
 ```
 
-The uninstaller removes `~/.config/fuzzy-exit/` and removes the Fuzzy Exit integration from `~/.bashrc` and `~/.zshrc`. Existing startup-file backups are preserved.
+The uninstaller removes the Fuzzy Exit installation directory and its marked integration block from the relevant shell startup file.
 
-## Supported Shells
+Existing startup-file backups are preserved.
 
-Fuzzy Exit currently targets:
+## Testing
 
-- Bash (via `command_not_found_handle` hook)
-- Zsh (via `command_not_found_handler` hook)
+The repository includes unit, integration, and corpus testing.
 
-The project is intended for Unix-like environments including Linux, macOS, FreeBSD, OpenBSD, NetBSD, and other compatible Unix-like systems.
+Run the normal test suite:
 
-## Windows
-
-Fuzzy Exit only supports Bash/Zsh on Unix-like systems and does not run on native Windows shells.
-
-- Running the installer inside a Bash-like layer on Windows (`MINGW*`/`MSYS*`/`CYGWIN*`, e.g. Git Bash) stops immediately, without touching shell configuration:
-
-  ```
-  Fuzzy Exit: Unsupported OS: Windows. Fuzzy Exit only supports Bash/Zsh on Linux, macOS, and other Unix-like systems.
-  ```
-
-- `install.bat` (cmd.exe) and `install.ps1` (PowerShell) are provided as native stubs. Running either one prints the same "Unsupported OS" message and exits non-zero, rather than failing with a generic "not recognized" error.
-
-WSL and other Unix-compatible environments are unaffected, since they provide a genuine Unix-like shell environment.
-
-## Why?
-
-Because humans type faster than they proofread. When you're working in a terminal, these are easy mistakes:
-
-```
-exit → exut
-exit → exii
-exit → exiy
-exit → extt
+```bash
+bash tests/run_tests.sh
 ```
 
-Fuzzy Exit simply says:
+Run installation/uninstallation integration tests:
 
-> «You meant "exit". We knew.»
+```bash
+bash tests/install_uninstall_test.sh
+```
+
+The repository also contains the full lowercase four-character corpus:
+
+```text
+26^4 = 456,976
+```
+
+and a workflow for exhaustive corpus validation:
+
+```text
+.github/workflows/full-corpus.yml
+```
+
+### Independent expected-match generation
+
+The expected match fixture is generated by a separate Python implementation:
+
+```bash
+python3 tests/generate_expected_matches.py > tests/fixtures/expected_matches.txt
+```
+
+This provides a cross-language check against transcription mistakes in the shell implementation.
+
+## Word Lists and Corpus
+
+The repository includes generated corpora under `word_lists/` and matching test fixtures under `tests/fixtures/`.
+
+### `exit_all_permutations.txt`
+
+Contains the unique permutations of:
+
+```text
+exit
+```
+
+followed by every other explicitly-supported near-miss command outside those permutations — see `word_lists/README.txt` for the breakdown.
+
+### `all_4_character_combinations.txt`
+
+Contains every possible lowercase 4-character combination:
+
+```text
+26^4 = 456,976
+```
+
+These files are used for testing and corpus validation. The runtime matcher does not load them directly.
 
 ## Design Philosophy
 
-Fuzzy Exit follows a few strict principles.
+Fuzzy Exit follows a few simple rules:
 
-1. **Stay tiny** — it should solve one problem and solve it quickly.
-2. **Never intercept real commands** — an installed executable always takes priority.
-3. **Don't modify the shell itself** — Fuzzy Exit operates through shell integration rather than replacing Bash, Zsh, or the terminal emulator.
-4. **Keep unrelated commands untouched** — for example, `wxit` is not an exit typo because it does not begin with the expected "ex" anchor, so it remains a normal command-not-found error.
-5. **Installation should be reversible** — the installer adds a clearly marked block, and the uninstaller removes that block without deleting unrelated shell configuration.
+1. **Stay tiny** — solve one problem and solve it quickly.
+2. **Use native Unix shell mechanisms** — integrate with Bash/Zsh rather than replacing the shell.
+3. **Never intentionally replace real commands** — normal command resolution happens first.
+4. **Keep unrelated commands untouched.**
+5. **Make installation reversible.**
+6. **Keep testing deterministic.**
+7. **Focus the project on Unix-like environments.**
 
-## Repository Layout
+## Security
 
-```
-fuzzy-exit/
-├── fuzzy-exit.sh
-├── install.sh
-├── install.bat
-├── install.ps1
-├── uninstall.sh
-├── README.md
-├── LICENSE
-├── .gitignore
-├── .github/
-│   └── workflows/
-│       ├── ci.yml
-│       └── full-corpus.yml
-└── tests/
-    ├── README.md
-    ├── run_tests.sh
-    ├── install_uninstall_test.sh
-    ├── generate_expected_matches.py
-    └── fixtures/
-        ├── all_4_character_combinations.txt
-        ├── exit_all_permutations.txt
-        └── expected_matches.txt
-```
+The installer modifies shell startup configuration, so only use installers obtained from a source you trust.
 
-## Word Lists
-
-The repository also includes generated word-combination corpora under `word_lists/`:
-
-- `exit_all_permutations.txt` — all 24 unique permutations of `exit`.
-- `all_4_character_combinations.txt` — all 456,976 lowercase four-character combinations.
-
-These corpora are provided as development/reference data. The runtime matcher does not load them.
-
-## Security Considerations
-
-The installer modifies shell startup configuration, so it should only be downloaded from a trusted source. For maximum transparency, users can inspect the installer before running it:
+For transparency, inspect scripts before piping them into a shell:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Sumon-Kayal/fuzzy-exit/main/install.sh
 ```
 
-Likewise, the main implementation can be inspected directly before installation. Never pipe an installer into a shell if you do not trust its source.
+Fuzzy Exit does not replace the shell executable.
+
+## Repository Layout
+
+```text
+fuzzy-exit/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── full-corpus.yml
+├── .gitignore
+│
+├── tests/
+│   ├── README.md
+│   ├── run_tests.sh
+│   ├── install_uninstall_test.sh
+│   ├── generate_expected_matches.py
+│   └── fixtures/
+│
+├── word_lists/
+│   ├── README.txt
+│   ├── all_4_character_combinations.txt
+│   └── exit_all_permutations.txt
+│
+├── fuzzy-exit.sh
+├── install.sh
+├── uninstall.sh
+├── CHANGELOG.md
+├── LICENSE
+└── README.md
+```
+
+## Version
+
+Current release:
+
+```text
+1.0.0
+```
+
+See [`CHANGELOG.md`](CHANGELOG.md) for release history.
 
 ## License
 
-Fuzzy Exit is free software distributed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).
+Fuzzy Exit is free software distributed under the **GNU General Public License v3.0 or later**.
 
-Copyright © 2026 Sumon Kayal.
-
-## Project
-
-**Fuzzy Exit** — https://github.com/Sumon-Kayal/fuzzy-exit
+See [`LICENSE`](LICENSE) for the full license text.
 
 ---
 
-*The idea in one line:* `exut` → `exit`
-
-Fuzzy Exit — because "exut" obviously meant "exit".
-
-### Explicit command set
-The merged release includes **52 unique commands** from the supplied command list, including the `ex??` and `3x??` variants. They are recorded explicitly in `fuzzy-exit/word_lists/exit_all_permutations.txt`.
+**Fuzzy Exit** — because `exut` obviously meant `exit`.

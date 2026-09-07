@@ -20,7 +20,7 @@ FIXTURES="$SCRIPT_DIR/fixtures"
 FULL_MODE=0
 [ "${1:-}" = "--full" ] && FULL_MODE=1
 
-# shellcheck source=../fuzzy-exit.sh
+# shellcheck source=fuzzy-exit.sh
 source "$REPO_ROOT/fuzzy-exit.sh"
 
 pass=0
@@ -72,6 +72,25 @@ while IFS= read -r word; do
     esac
 done < "$FIXTURES/exit_all_permutations.txt"
 
+echo "== word_lists/exit_all_permutations.txt: explicit valid commands must all match =="
+# Everything below the first '#' comment in this file is the curated,
+# supplied command set (leading "3" typo for "e", or "e_it" with the "x"
+# slot wrong) - see fuzzy-exit.sh. Unlike the 24 anagrams above, every one
+# of these is expected to match.
+if [ -f "$REPO_ROOT/word_lists/exit_all_permutations.txt" ]; then
+    in_explicit_section=0
+    while IFS= read -r word; do
+        case "$word" in
+            "#"*) in_explicit_section=1; continue ;;
+            "") continue ;;
+        esac
+        [ "$in_explicit_section" -eq 1 ] || continue
+        check "$word" match
+    done < "$REPO_ROOT/word_lists/exit_all_permutations.txt"
+else
+    record fail "word_lists/exit_all_permutations.txt not found (add and commit it to test the explicit command list)"
+fi
+
 echo "== Exhaustive check: every 4-char string starting with 'ex' (676 total) =="
 # This is the entire decision boundary for 4-char input: __fuzzy_exit_match's
 # own anchor check rejects anything not starting with "ex" before it looks at
@@ -102,21 +121,36 @@ fi
 
 echo "== Safety invariant: nothing outside the 'ex' prefix ever matches =="
 total_lines=$(wc -l < "$FIXTURES/all_4_character_combinations.txt")
-non_ex_count=$((total_lines - candidate_count))
-echo "  ($total_lines total 4-char strings, $non_ex_count start with something other than 'ex')"
+
+# Words outside the "ex" prefix that word_lists/exit_all_permutations.txt
+# explicitly documents as supported (a leading "3" typo for "e", or "e_it"
+# with the "x" slot wrong - see fuzzy-exit.sh). These are expected
+# matches, not false positives, so this scan excludes them. (In practice
+# only the "e_it" ones can even appear below: all_4_character_combinations.txt
+# is lowercase letters only, so the "3"-prefixed words never occur in it.)
+extra_expected="$SCRIPT_DIR/.extra_expected.tmp"
+if [ -f "$REPO_ROOT/word_lists/exit_all_permutations.txt" ]; then
+    awk '/^#/ { seen = 1; next } seen && NF' "$REPO_ROOT/word_lists/exit_all_permutations.txt" | sort -u > "$extra_expected"
+else
+    : > "$extra_expected"
+    echo "  (word_lists/exit_all_permutations.txt not found; skipping the deliberately-supported exclusion list)"
+fi
+
+non_ex_candidates="$SCRIPT_DIR/.non_ex_candidates.tmp"
+grep -v '^ex' "$FIXTURES/all_4_character_combinations.txt" | grep -vxFf "$extra_expected" > "$non_ex_candidates"
+non_ex_count=$(wc -l < "$non_ex_candidates")
+echo "  ($total_lines total 4-char strings, $non_ex_count filtered non-'ex' candidates)"
 
 if [ "$FULL_MODE" -eq 1 ]; then
-    echo "  --full: invoking the real matcher on all $non_ex_count of them (this takes a while)..."
+    echo "  --full: invoking the real matcher on all $non_ex_count filtered non-'ex' candidates (this takes a while)..."
+    trap 'rm -f "$ex_candidates" "$actual_matches" "$extra_expected" "$non_ex_candidates"' EXIT
     unexpected=0
     while IFS= read -r word; do
-        case "$word" in
-            ex??) continue ;; # already covered exhaustively above
-        esac
         if __fuzzy_exit_match "$word"; then
             unexpected=$((unexpected + 1))
             echo "  UNEXPECTED MATCH: $word"
         fi
-    done < "$FIXTURES/all_4_character_combinations.txt"
+    done < "$non_ex_candidates"
     if [ "$unexpected" -eq 0 ]; then
         record ok
         echo "  confirmed: zero false positives across the full corpus"
@@ -127,8 +161,8 @@ else
     # Deterministic stride sample (~3,330 words spread across the whole
     # corpus) so this is fast, reproducible, and needs nothing beyond awk.
     sample="$SCRIPT_DIR/.nonex_sample.tmp"
-    trap 'rm -f "$ex_candidates" "$actual_matches" "$sample"' EXIT
-    awk '!/^ex/ && NR % 137 == 0' "$FIXTURES/all_4_character_combinations.txt" > "$sample"
+    trap 'rm -f "$ex_candidates" "$actual_matches" "$extra_expected" "$non_ex_candidates" "$sample"' EXIT
+    awk '!/^ex/ && NR % 137 == 0' "$FIXTURES/all_4_character_combinations.txt" | grep -vxFf "$extra_expected" > "$sample"
     sample_count=$(wc -l < "$sample")
     unexpected=0
     while IFS= read -r word; do
@@ -136,7 +170,7 @@ else
     done < "$sample"
     if [ "$unexpected" -eq 0 ]; then
         record ok
-        echo "  sampled $sample_count of $non_ex_count non-'ex' strings, zero false positives (run with --full to check all of them)"
+        echo "  sampled $sample_count of $non_ex_count filtered non-'ex' candidates, zero false positives (run with --full to check all of them)"
     else
         record fail "$unexpected/$sample_count sampled non-'ex' string(s) matched; see above"
     fi

@@ -8,8 +8,11 @@
 #
 # Real commands always win: this only ever runs after your shell has
 # already looked for the typed command everywhere (builtins, functions,
-# aliases, $PATH) and failed to find it. If a real command exists, it
-# __fuzzy_exit_match determines whether an argument matches "exit" or an accepted case-insensitive near-miss.
+# aliases, $PATH) and failed to find it. A real command is never routed
+# through this matcher.
+#
+# __fuzzy_exit_match determines whether an argument matches "exit" or an
+# accepted case-insensitive near-miss.
 
 __fuzzy_exit_match() {
     local lc suf n c1 c2 c3
@@ -17,6 +20,23 @@ __fuzzy_exit_match() {
     lc=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
 
     if [ "$lc" = "exit" ]; then
+        return 0
+    fi
+
+    # Leading-key typo: on a QWERTY row, "3" sits directly above "e", so
+    # treat it as an accepted stand-in for the first letter of "exit".
+    # Exactly one of the two middle characters may then also be wrong,
+    # as long as the other one and the trailing "t" are intact.
+    if [ "${#lc}" -eq 4 ] && [ "${lc:0:1}" = "3" ] && [ "${lc:3:1}" = "t" ]; then
+        if [ "${lc:1:1}" = "x" ] || [ "${lc:2:1}" = "i" ]; then
+            return 0
+        fi
+    fi
+
+    # Same idea starting from the correct "e": the "x" slot alone may be
+    # wrong as long as "e_it" is otherwise intact. (The "i" slot alone
+    # being wrong is already covered below via the "ex" anchor.)
+    if [ "${#lc}" -eq 4 ] && [ "${lc:0:1}" = "e" ] && [ "${lc:1:1}" != "x" ] && [ "${lc:2:1}" = "i" ] && [ "${lc:3:1}" = "t" ]; then
         return 0
     fi
 

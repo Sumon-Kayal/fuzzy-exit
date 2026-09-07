@@ -23,11 +23,11 @@ xite
 xtei
 xtie
 # Explicit valid commands from supplied command set
-3x3t
 3xat
 3xbt
 3xct
 3xdt
+3xet
 3xft
 3xgt
 3xht

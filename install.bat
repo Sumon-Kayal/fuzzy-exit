@@ -1,7 +1,7 @@
 @echo off
 REM Fuzzy Exit installer - Windows cmd.exe entry point
 REM SPDX-License-Identifier: GPL-3.0-or-later
-REM
+
 REM Fuzzy Exit only supports Bash/Zsh on Unix-like systems. cmd.exe cannot
 REM run install.sh, so this stub exists to fail with a clear message
 REM instead of Windows' generic "is not recognized" error.
