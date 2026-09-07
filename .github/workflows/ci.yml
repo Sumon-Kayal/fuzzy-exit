@@ -2,8 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    paths-ignore:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'docs/**'
   pull_request:
+    paths-ignore:
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'docs/**'
   workflow_dispatch:
 
 jobs:
@@ -11,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
       - name: shellcheck
         run: shellcheck fuzzy-exit.sh install.sh uninstall.sh tests/run_tests.sh tests/install_uninstall_test.sh
 
@@ -26,4 +35,3 @@ jobs:
         run: bash tests/run_tests.sh
       - name: Install/uninstall integration test
         run: bash tests/install_uninstall_test.sh
-
