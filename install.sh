@@ -14,6 +14,14 @@ die() { printf 'Fuzzy Exit: %s\n' "$*" >&2; exit 1; }
 
 [ -n "${HOME:-}" ] || die "HOME is not set."
 
+# Fuzzy Exit targets Bash/Zsh on Unix-like systems. Native Windows shells,
+# including Bash-like layers on top of Windows (Git Bash/MSYS2/Cygwin), are
+# not supported and must not be modified.
+case "$(uname -s 2>/dev/null || printf unknown)" in
+    MINGW*|MSYS*|CYGWIN*)
+        die "Unsupported OS: Windows. Fuzzy Exit only supports Bash/Zsh on Linux, macOS, and other Unix-like systems."
+        ;;
+esac
 
 # Fuzzy Exit is intended for Bash/Zsh startup files.
 shell_name="$(basename "${SHELL:-}")"
