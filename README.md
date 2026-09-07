@@ -226,6 +226,9 @@ Contains the unique permutations of:
 exit
 ```
 
+followed by every other explicitly-supported near-miss command outside those
+permutations — see `word_lists/README.txt` for the breakdown.
+
 ### `all_4_character_combinations.txt`
 
 Contains every possible lowercase 4-character combination:
@@ -268,6 +271,7 @@ fuzzy-exit/
 │   └── workflows/
 │       ├── ci.yml
 │       └── full-corpus.yml
+├── .gitignore
 │
 ├── tests/
 │   ├── README.md
@@ -294,7 +298,7 @@ fuzzy-exit/
 Current release:
 
 ```text
-1.0
+1.0.0
 ```
 
 See [`CHANGELOG.md`](CHANGELOG.md) for release history.
