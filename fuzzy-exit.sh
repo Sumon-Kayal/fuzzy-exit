@@ -8,8 +8,11 @@
 #
 # Real commands always win: this only ever runs after your shell has
 # already looked for the typed command everywhere (builtins, functions,
-# aliases, $PATH) and failed to find it. If a real command exists, it
-# __fuzzy_exit_match determines whether an argument matches "exit" or an accepted case-insensitive near-miss.
+# aliases, $PATH) and failed to find it. A real command is never routed
+# through this matcher.
+#
+# __fuzzy_exit_match determines whether an argument matches "exit" or an
+# accepted case-insensitive near-miss.
 
 __fuzzy_exit_match() {
     local lc suf n c1 c2 c3
