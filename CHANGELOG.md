@@ -35,9 +35,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Removed
 
-- Windows-specific implementation.
+- Windows-specific implementation (full Windows runtime and build artifacts).
 - Windows executable and build artifacts.
-- Windows-specific installers and uninstallers.
+- Windows-specific installers and uninstallers (the project now provides minimal Windows stubs that print an "Unsupported OS" message and exit non-zero instead of attempting installation).
 - Other platform-specific Windows release infrastructure.
 
 ### Security
@@ -57,7 +57,7 @@ Supported environments include:
 - Bash
 - Zsh
 
-Windows is not supported by this release.
+Native Windows (cmd.exe / PowerShell) is not supported by this release; the repository includes small installer stubs (install.bat, install.ps1) which print an explanatory "Unsupported OS" message and exit non-zero to avoid accidental changes on Windows systems.
 
 ### Notes
 
